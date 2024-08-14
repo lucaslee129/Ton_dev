@@ -10,6 +10,7 @@
   },
   "scripts": {
     "step7": "npx ts-node step7.ts",
-    "step8": "npx ts-node step8.ts"
+    "step8": "npx ts-node step8.ts",
+    "step9": "npx ts-node step9.ts"
   }
 }
