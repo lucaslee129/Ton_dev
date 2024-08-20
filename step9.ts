@@ -37,7 +37,7 @@ async function main() {
     let currentSeqno = seqno;
     while(currentSeqno == seqno) {
         console.log("Waiting for Transaction to Confirm...");
-        await sleep(1500);
+        await sleep(3000);
         currentSeqno = await walletContract.getSeqno();
     }
     console.log("Transaction confirmed!");
