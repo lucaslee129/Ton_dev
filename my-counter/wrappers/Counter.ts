@@ -83,3 +83,11 @@ export type CounterConfig = {}
 export function counterConfigToCell(config: CounterConfig): Cell {
     return beginCell().storeUint(0, 64).endCell();
 }
+
+export type ProxyConfig = {
+    owner: Address;
+}
+
+export function proxyConfigToCell(config: ProxyConfig): Cell {
+    return beginCell().storeAddress(config.owner).endCell();
+}

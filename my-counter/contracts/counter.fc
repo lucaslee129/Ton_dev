@@ -4,31 +4,153 @@
     - recv_internal function is called to process the inline call with other smart contract
     - impure specifier is used for functions which modify the state of contract 
 -}
-() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
-    ;; throw_if function is used for throwing the excecption
-    ;; first parameter is error code and secode parameter is condition
-    throw_if(35, in_msg_body.slice_bits() < 32);
-    
-    int n = in_msg_body~load_uint(32); ;; load_uint(32) funnction is load data of message body. ~ operator is to allow the load_uint function modify the first argument
 
-    slice ds = get_data().begin_parse();  ;; get_data() function is used for getting datas of permanent data of contract storage
-    int total = ds~load_uint(64); ;; here total get the value of 64 bit of ds. After executing this, ds has only other arguments excepting the first argument.
+int equal_slice (slice a, slice b) asm "SDEQ"; ;;  function that compares two slices for equality. if equal return 1, else return 0
 
-    total += n;
-
-    ;; set_data function stores the value to permanent storage of contract
-    ;; begin_cell() function initiate the process building a new cell to store the value
-    ;; store_uint function stores the u integer to builder. First paramter is value and second paramter is length
-    ;; end_cell finalize the builder and converts it to a cell.
-    set_data(begin_cell().store_uint(total, 64).end_cell());
+slice load_data() inline { ;; function for owner address from the contract data
+    var ds = get_data().begin_parse(); ;; convert the cell to slice using begin parse function
+    return ds~load_msg_addr(); ;; extract the address from the slice
 }
 
+{-
+    This function is for parsing msg sender's address from the in_msg_full data
+-}
+slice parse_sender_address(cell in_msg_full) inline { 
+    var cs = in_msg_full.begin_parse(); ;; convert the message to slice to read the data
+    var flags = cs~load_uint(4); ;; ignore the first 4 bytes of the first which is flag field
+    slice sender_address = cs~load_msg_addr(); ;; extract the address from the message data
+    return sender_address; ;; return the address
+}
 
-;; get_total function is user-defined function
-;; method_id specifier allows this function can be called by its name externally. It is similar with 'public' or 'external' on solidity
-int get_total() method_id { 
-    slice ds = get_data().begin_parse();
-    int total = ds~load_uint(64);
+{-
+    Here are some assemble operators on FunC:
+        "CTOS" - Converts a cell to a slice
+        "ENDS" - Checks if a slice is empty
+        "LDREF" - Loads a reference from a slice
+        "PLDREF" - Preloads a reference from a slice
+        "LDMSGADDR" - Loads a message address from a slice
+        "PARSEMSGADDR" - Parses a message address
+        "REWRITESTDADDR" - Rewrites a standard address
+        "STSLICER" - Stores a slice into a builder
+        "STGRAMS" - Stores grams (coins) into a builder
+        "HASHCU" - Computes the hash of a cell
+        "HASHSU" - Computes the hash of a slice
+        "SHA256U" - Computes SHA256 hash of a slice
+        "CHKSIGNU" - Checks a signature
+        "CHKSIGNS" - Checks a signature of data
+        "CDATASIZE" - Computes data size of a cell
+        "SDATASIZE" - Computes data size of a slice
+        "LDGRAMS" - Loads grams (coins) from a slice
+        "SDSKIPFIRST" - Skips first bits of a slice
+        "SDCUTFIRST" - Cuts first bits of a slice
+        "SDSKIPLAST" - Skips last bits of a slice
+        "SDCUTLAST" - Cuts last bits of a slice
+        "LDDICT" - Loads a dictionary from a slice
+        "PLDDICT" - Preloads a dictionary from a slice
+        "SKIPDICT" - Skips a dictionary in a slice
+        "LDOPTREF" - Loads an optional reference from a slice
+        "PLDOPTREF" - Preloads an optional reference from a slice
+        "CDEPTH" - Returns the depth of a cell
+        "SREFS" - Returns the number of references in a slice
+        "SBITS" - Returns the number of bits in a slice
+        "SDEQ" - Checks if two slices are equal
 
-    return total;
+
+
+        Popular Operators:
+        "CTOS" - Converts a cell to a slice
+        "LDREF" - Loads a reference from a slice
+        "STGRAMS" - Stores grams (coins) into a builder
+        "HASHCU" - Computes the hash of a cell
+        "CHKSIGNU" - Checks a signature
+        "LDGRAMS" - Loads grams (coins) from a slice
+        "LDDICT" - Loads a dictionary from a slice
+        "SREFS" - Returns the number of references in a slice
+        "SBITS" - Returns the number of bits in a slice
+        "NOW" - Returns the current Unix time
+        "MYADDR" - Returns the address of the current smart contract
+        "BALANCE" - Returns the balance of the smart contract
+
+        Less Popular Operators:
+        "ENDS" - Checks if a slice is empty
+        "PLDREF" - Preloads a reference from a slice
+        "LDMSGADDR" - Loads a message address from a slice
+        "PARSEMSGADDR" - Parses a message address
+        "REWRITESTDADDR" - Rewrites a standard address
+        "STSLICER" - Stores a slice into a builder
+        "HASHSU" - Computes the hash of a slice
+        "SHA256U" - Computes SHA256 hash of a slice
+        "CHKSIGNS" - Checks a signature of data
+        "CDATASIZE" - Computes data size of a cell
+        "SDATASIZE" - Computes data size of a slice
+        "SDSKIPFIRST" - Skips first bits of a slice
+        "SDCUTFIRST" - Cuts first bits of a slice
+        "SDSKIPLAST" - Skips last bits of a slice
+        "SDCUTLAST" - Cuts last bits of a slice
+        "PLDDICT" - Preloads a dictionary from a slice
+        "SKIPDICT" - Skips a dictionary in a slice
+        "LDOPTREF" - Loads an optional reference from a slice
+        "PLDOPTREF" - Preloads an optional reference from a slice
+        "CDEPTH" - Returns the depth of a cell
+        "SDEQ" - Checks if two slices are equal
+        "LTIME" - Returns the logical time of the current transaction
+        "BLOCKLT" - Returns the starting logical time of the current block
+        "COMMIT" - Commits the current state of registers
+        "BUYGAS" - Buys gas for computation
+        "MIN", "MAX", "MINMAX" - Arithmetic operations
+        "ABS" - Computes absolute value
+        "DUMPSTK" - Dumps the stack for debugging
+        "SBITREFS" - Returns both number of bits and references in a slice
+        "SEMPTY", "SDEMPTY", "SREMPTY" - Various slice emptiness checks
+        "SDEPTH" - Returns the depth of a slice
+        "BREFS", "BBITS" - Returns number of references/bits in a builder
+        "RANDSEED", "SETRAND", "ADDRAND" - Random number generation operations
+        "STBR" - Concatenates two builders
+
+-}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    slice sender_address = parse_sender_address(in_msg_full);
+    slice owner_address = load_data();
+    
+    if ~ equal_slice(sender_address, owner_address) {
+        cell msg_body_cell = begin_cell().store_slice(in_msg_body).end_cell();
+
+        var msg = begin_cell()
+            .store_uint(0x10, 6)
+            .store_slice(owner_address)
+            .store_grams(0) ;; Stores grams (coins) into a builder
+            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+            .store_slice(sender_address)
+            .store_ref(msg_body_cell)
+            .end_cell();
+
+        ;; the function on standard library for sending message, first parameter is message and second paramenter is sending mode
+        send_raw_message(msg, 64); 
+
+        {- 
+            Message sending mode:
+            Let's assume, balance 100 coins and receive 60 coins and send 10 coins, fee is 3 coins
+            - Mode 0 : Ordinary messge
+                * Balance of Contract : 100 + 60 -10 = 150
+                * Sending coins to other contract : 10 - 3 = 7.abs()
+                * Finally, 7 coins has been sent to other contract
+            - Mode 1:
+                * Balance of Contract : 100 + 60 -10 - 3 = 147
+                * Sending coins to other contract : 10
+                * Finally, 10 coins has been sent to other contract
+            - Mode 64:
+                * Balance of Contract : 100 -10  = 90
+                * Sending coins to other contract : 60 + 10 -3 = 67
+                * Finally, 67 coins has been sent to other contract
+            - Mode 65:
+                * Balance of Contract : 100 -10 - 3 = 87
+                * Sending coins to other contract : 60 + 10 = 70
+                * Finally, 70 coins has been sent to other contract
+            - Mode 128:
+                * Balance of Contract : 0
+                * Sending coins to other contract : 100 + 60 - 3 = 157
+                * Finally, 147 coins has been sent to other contract
+        -}
+    }
 }

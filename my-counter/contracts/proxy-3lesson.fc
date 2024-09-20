@@ -4,51 +4,8 @@
     - recv_internal function is called to process the inline call with other smart contract
     - impure specifier is used for functions which modify the state of contract 
 -}
-() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
-    slice sender_address = parse_sender_address(in_msg_full);
-    slice owner_address = load_data();
-    
-    if ~ equal_slice(sender_address, owner_address) {
-        cell msg_body_cell = begin_cell().store_slice(in_msg_body).end_cell();
 
-        var msg = begin_cell()
-            .store_uint(0x10, 6)
-            .store_slice(owner_address)
-            .store_grams(0) ;; Stores grams (coins) into a builder
-            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-            .store_slice(sender_address)
-            .store_ref(msg_body_cell)
-            .end_cell();
-
-        ;; the function on standard library for sending message, first parameter is message and second paramenter is sending mode
-        send_raw_message(msg, 64); 
-
-        {- 
-            Message sending mode:
-            Let's assume, balance 100 coins and receive 60 coins and send 10 coins, fee is 3 coins
-            - Mode 0 : Ordinary messge
-                * Balance of Contract : 100 + 60 -10 = 150
-                * Sending coins to other contract : 10 - 3 = 7.abs()
-                * Finally, 7 coins has been sent to other contract
-            - Mode 1:
-                * Balance of Contract : 100 + 60 -10 - 3 = 147
-                * Sending coins to other contract : 10
-                * Finally, 10 coins has been sent to other contract
-            - Mode 64:
-                * Balance of Contract : 100 -10  = 90
-                * Sending coins to other contract : 60 + 10 -3 = 67
-                * Finally, 67 coins has been sent to other contract
-            - Mode 65:
-                * Balance of Contract : 100 -10 - 3 = 87
-                * Sending coins to other contract : 60 + 10 = 70
-                * Finally, 70 coins has been sent to other contract
-            - Mode 128:
-                * Balance of Contract : 0
-                * Sending coins to other contract : 100 + 60 - 3 = 157
-                * Finally, 147 coins has been sent to other contract
-        -}
-    }
-}
+int equal_slice (slice a, slice b) asm "SDEQ"; ;;  function that compares two slices for equality. if equal return 1, else return 0
 
 slice load_data() inline { ;; function for owner address from the contract data
     var ds = get_data().begin_parse(); ;; convert the cell to slice using begin parse function
@@ -64,18 +21,6 @@ slice parse_sender_address(cell in_msg_full) inline {
     slice sender_address = cs~load_msg_addr(); ;; extract the address from the message data
     return sender_address; ;; return the address
 }
-
-;; get_total function is user-defined function
-;; method_id specifier allows this function can be called by its name externally. It is similar with 'public' or 'external' on solidity
-int get_total() method_id { 
-    slice ds = get_data().begin_parse();
-    int total = ds~load_uint(64);
-
-    return total;
-}
-
-int equal_slice (slice a, slice b) asm "SDEQ"; ;;  function that compares two slices for equality. if equal return 1, else return 0
-
 
 {-
     Here are some assemble operators on FunC:
@@ -163,3 +108,49 @@ int equal_slice (slice a, slice b) asm "SDEQ"; ;;  function that compares two sl
         "STBR" - Concatenates two builders
 
 -}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    slice sender_address = parse_sender_address(in_msg_full);
+    slice owner_address = load_data();
+    
+    if ~ equal_slice(sender_address, owner_address) {
+        cell msg_body_cell = begin_cell().store_slice(in_msg_body).end_cell();
+
+        var msg = begin_cell()
+            .store_uint(0x10, 6)
+            .store_slice(owner_address)
+            .store_grams(0) ;; Stores grams (coins) into a builder
+            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+            .store_slice(sender_address)
+            .store_ref(msg_body_cell)
+            .end_cell();
+
+        ;; the function on standard library for sending message, first parameter is message and second paramenter is sending mode
+        send_raw_message(msg, 64); 
+
+        {- 
+            Message sending mode:
+            Let's assume, balance 100 coins and receive 60 coins and send 10 coins, fee is 3 coins
+            - Mode 0 : Ordinary messge
+                * Balance of Contract : 100 + 60 -10 = 150
+                * Sending coins to other contract : 10 - 3 = 7.abs()
+                * Finally, 7 coins has been sent to other contract
+            - Mode 1:
+                * Balance of Contract : 100 + 60 -10 - 3 = 147
+                * Sending coins to other contract : 10
+                * Finally, 10 coins has been sent to other contract
+            - Mode 64:
+                * Balance of Contract : 100 -10  = 90
+                * Sending coins to other contract : 60 + 10 -3 = 67
+                * Finally, 67 coins has been sent to other contract
+            - Mode 65:
+                * Balance of Contract : 100 -10 - 3 = 87
+                * Sending coins to other contract : 60 + 10 = 70
+                * Finally, 70 coins has been sent to other contract
+            - Mode 128:
+                * Balance of Contract : 0
+                * Sending coins to other contract : 100 + 60 - 3 = 157
+                * Finally, 147 coins has been sent to other contract
+        -}
+    }
+}
