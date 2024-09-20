@@ -46,11 +46,11 @@ describe('Counter', () => {
     });
 
     it("should update the number", async () => {
-        const caller = await blockchain.treasury('caller');
+        const caller = await blockchain.treasury('caller'); // Create the Treasury wallet with milion coins on Local ton network for testing
         
-        await counter.sendNumber(caller.getSender(), toNano('0.01'), 10n);
-        expect(await counter.getTotal()).toEqual(10n);
-
+        await counter.sendNumber(caller.getSender(), toNano('0.01'), 10n); // Send transaction with number 10
+        expect(await counter.getTotal()).toEqual(10n); // get number from the counter smart contract
+        
         await counter.sendNumber(caller.getSender(), toNano("0.01"), 5n);
         expect(await counter.getTotal()).toEqual(15n);
 
@@ -59,10 +59,11 @@ describe('Counter', () => {
     })
 
     it("should throw error when number is not 32 bits", async () => {
-        const caller = await blockchain.treasury("caller");
+        const caller = await blockchain.treasury("caller"); // Create the tresury wallet
 
-        const result = await counter.sendDeploy(caller.getSender(), toNano('0.01'));
-        expect(result.transactions).toHaveTransaction({
+        const result = await counter.sendDeploy(caller.getSender(), toNano('0.01')); // Deploy the smart contract with no data
+
+        expect(result.transactions).toHaveTransaction({ // Check whether following information are included on transaction
             from: caller.address,
             to: counter.address,
             success: false,
