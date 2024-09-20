@@ -1,4 +1,4 @@
-# contract
+# my-counter
 
 ## Project structure
 
