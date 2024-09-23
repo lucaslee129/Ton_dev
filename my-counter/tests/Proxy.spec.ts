@@ -4,7 +4,7 @@ import { Proxy } from '../wrappers/Proxy';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
 
-describe('Counter', () => {
+describe('Proxy', () => {
     let code: Cell;
 
     beforeAll(async () => {
