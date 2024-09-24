@@ -54,21 +54,22 @@ export class AddressSaver implements Contract {
         });
     }
 
-   async sendChangeAddress(provider: ContractProvider, via: Sender, value: bigint, queryId: bigint, newAddress: Address) {
+    async sendChangeAddress(provider: ContractProvider, via: Sender, value: bigint, queryId: bigint, newAddress: Address) {
         await provider.internal(via, {
             value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: beginCell().storeUint(queryId, 64).storeAddress(newAddress).endCell(),
-        })
-   }
+            body: beginCell().storeUint(1, 32).storeUint(queryId, 64).storeAddress(newAddress).endCell(),
+        });
+    }
+    
 
-   async sendRequestAddress(provider: ContractProvider, via: Sender, value: bigint, queryId: bigint) {
+    async sendRequestAddress(provider: ContractProvider, via: Sender, value: bigint, queryId: bigint) {
         await provider.internal(via, {
             value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell().storeUint(2, 32).storeUint(queryId, 64).endCell(),
-        })
-   }
+        });
+    }
 }
 
 export type AddressSaverConfig = {

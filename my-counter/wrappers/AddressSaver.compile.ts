@@ -1,6 +1,6 @@
 import { CompilerConfig } from '@ton/blueprint';
 
-export const id_op: CompilerConfig = {
+export const compile: CompilerConfig = {
     lang: 'func',
-    targets: ['contracts/id_op.fc'],
+    targets: ['contracts/AddressSaver.fc'],
 };

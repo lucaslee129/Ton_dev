@@ -12,7 +12,7 @@ int equal_slice (slice a, slice b) asm "SDEQ";
 }
 
 slice parse_sender_address (cell in_msg_full) inline {
-    var cs = in-msg_full.begin_parse();
+    var cs = in_msg_full.begin_parse();
     var flags = cs~load_uint(4);
     slice sender_address = cs~load_msg_addr();
     return sender_address;

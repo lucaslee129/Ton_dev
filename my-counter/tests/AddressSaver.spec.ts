@@ -1,107 +1,182 @@
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
-import { Cell, toNano } from '@ton/core';
-import { Counter } from '../wrappers/Counter';
+import { beginCell, Cell, toNano } from '@ton/core';
+import { AddressSaver } from '../wrappers/AddressSaver';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
+import { randomAddress } from '@ton/test-utils';
 
-describe('Counter', () => {
+describe('AddressSaver', () => {
     let code: Cell;
 
     beforeAll(async () => {
-        code = await compile('Counter');
+        code = await compile('AddressSaver');
     });
 
     let blockchain: Blockchain;
     let deployer: SandboxContract<TreasuryContract>;
-    let counter: SandboxContract<Counter>;
+    let addressSaver: SandboxContract<AddressSaver>;
 
     beforeEach(async () => {
         blockchain = await Blockchain.create();
+        deployer = await blockchain.treasury('deployer');
 
-        counter = blockchain.openContract(
-            Counter.createFromConfig(
+        addressSaver = blockchain.openContract(
+            AddressSaver.createFromConfig(
                 {
-                    id: 0,
-                    counter: 0,
+                    manager: deployer.address,
                 },
                 code
             )
         );
 
-        deployer = await blockchain.treasury('deployer');
-
-        const deployResult = await counter.sendDeploy(deployer.getSender(), toNano('0.05'));
+        const deployResult = await addressSaver.sendDeploy(deployer.getSender(), toNano('0.05'));
 
         expect(deployResult.transactions).toHaveTransaction({
             from: deployer.address,
-            to: counter.address,
+            to: addressSaver.address,
             deploy: true,
             // success: true,
         });
     });
 
-    it('should deploy', async () => {
-        // the check is done inside beforeEach
-        // blockchain and counter are ready to use
+    it('should change saved address by manager', async () => {
+        const address = randomAddress();
+        const result = await addressSaver.sendChangeAddress(
+            deployer.getSender(),
+            toNano('0.01'),
+            12345n,
+            address
+        );
+    
+        console.log("Trasaction as a result", result.transactions);
+
+        // expect(result.transactions).toHaveTransaction({
+        //     from: deployer.address,
+        //     to: addressSaver.address,
+        //     success: true,
+        // });
     });
 
-    it("should update the number", async () => {
-        const caller = await blockchain.treasury('caller'); // Create the Treasury wallet with milion coins on Local ton network for testing
-        
-        await counter.sendNumber(caller.getSender(), toNano('0.01'), 10n); // Send transaction with number 10
-        expect(await counter.getTotal()).toEqual(10n); // get number from the counter smart contract
-        
-        await counter.sendNumber(caller.getSender(), toNano("0.01"), 5n);
-        expect(await counter.getTotal()).toEqual(15n);
-
-        await counter.sendNumber(caller.getSender(), toNano("0.01"), 1000n);
-        expect(await counter.getTotal()).toEqual(1015n);
-    })
-
-    it("should throw error when number is not 32 bits", async () => {
-        const caller = await blockchain.treasury("caller"); // Create the tresury wallet
-
-        const result = await counter.sendDeploy(caller.getSender(), toNano('0.01')); // Deploy the smart contract with no data
-
-        expect(result.transactions).toHaveTransaction({ // Check whether following information are included on transaction
-            from: caller.address,
-            to: counter.address,
-            success: false,
-            exitCode: 35
-        })
-    })
-
-    // it('should increase counter', async () => {
-    //     const increaseTimes = 3;
-    //     for (let i = 0; i < increaseTimes; i++) {
-    //         console.log(`increase ${i + 1}/${increaseTimes}`);
-
-    //         const increaser = await blockchain.treasury('increaser' + i);
-
-    //         const counterBefore = await counter.getCounter();
-
-    //         console.log('counter before increasing', counterBefore);
-
-    //         const increaseBy = Math.floor(Math.random() * 100);
-
-    //         console.log('increasing by', increaseBy);
-
-    //         const increaseResult = await counter.sendIncrease(increaser.getSender(), {
-    //             increaseBy,
-    //             value: toNano('0.05'),
-    //         });
-
-    //         expect(increaseResult.transactions).toHaveTransaction({
-    //             from: increaser.address,
-    //             to: counter.address,
-    //             success: true,
-    //         });
-
-    //         const counterAfter = await counter.getCounter();
-
-    //         console.log('counter after increasing', counterAfter);
-
-    //         expect(counterAfter).toBe(counterBefore + increaseBy);
-    //     }
+    // it('should not change saved address by anyone else', async () => {
+    //     let user = await blockchain.treasury('user');
+    //     const address = randomAddress();
+    //     const result = await addressSaver.sendChangeAddress(
+    //         user.getSender(),
+    //         toNano('0.01'),
+    //         12345n,
+    //         address
+    //     );
+    
+    //     expect(result.transactions).toHaveTransaction({
+    //         from: user.address,
+    //         to: addressSaver.address,
+    //         success: false,
+    //     });
     // });
+
+    // it('should change saved address by manager', async () => {
+    //     const address = randomAddress();
+    //     const result = await addressSaver.sendChangeAddress(
+    //         deployer.getSender(),
+    //         toNano('0.01'),
+    //         12345n,
+    //         address
+    //     );
+
+    //     expect(result.transactions).toHaveTransaction({
+    //         from: deployer.address,
+    //         to: addressSaver.address,
+    //         success: true,
+    //     })
+    // });
+
+    // it('should not change saved address by anyone else', async() => {
+    //     let user = await blockchain.treasury('user');
+    //     const address = randomAddress();
+    //     const result = await addressSaver.sendChangeAddress(
+    //         user.getSender(),
+    //         toNano('0.01'),
+    //         12345n,
+    //         address
+    //     );
+
+    //     expect(result.transactions).toHaveTransaction({
+    //         from: user.address,
+    //         to: addressSaver.address,
+    //         success: false,
+    //     })
+    // });
+
+    // it('should return required data on `requestAddress` call', async () => {
+    //     const address = randomAddress();
+    //     await addressSaver.sendChangeAddress(
+    //         deployer.getSender(),
+    //         toNano('0.01'),
+    //         12345n,
+    //         address
+    //     );
+
+    //     let user = await blockchain.treasury('user');
+    //     const result = await addressSaver.sendRequestAddress(
+    //         user.getSender(),
+    //         toNano('0.01'),
+    //         12345n
+    //     );
+
+    //     expect(result.transactions).toHaveTransaction({
+    //         from : addressSaver.address,
+    //         to: user.address,
+    //         body: beginCell()
+    //             .storeUint(3, 32)
+    //             .storeUint(12345n, 64)
+    //             .storeAddress(deployer.address)
+    //             .storeAddress(address)
+    //             .endCell(),
+    //     });
+    // })
+
+    // it('should return required data on `requestAddress` call', async () => {
+    //     const address = randomAddress();
+    //     await addressSaver.sendChangeAddress(
+    //         deployer.getSender(),
+    //         toNano('0.01'),
+    //         12345n,
+    //         address
+    //     );
+    
+    //     let user = await blockchain.treasury('user');
+    //     const result = await addressSaver.sendRequestAddress(
+    //         user.getSender(),
+    //         toNano('0.01'),
+    //         12345n
+    //     );
+    //     expect(result.transactions).toHaveTransaction({
+    //         from: addressSaver.address,
+    //         to: user.address,
+    //         body: beginCell()
+    //             .storeUint(3, 32)
+    //             .storeUint(12345n, 64)
+    //             .storeAddress(deployer.address)
+    //             .storeAddress(address)
+    //             .endCell(),
+    //     });
+    // });
+
+    // it("should throw on any other opcode", async () => {
+    //     const result = await deployer.send({
+    //         to: addressSaver.address,
+    //         value: toNano('0.01'),
+    //         body: beginCell().storeUint(5, 32).storeUint(12345n, 64).endCell(),
+    //     })
+
+    //     expect(result.transactions).toHaveTransaction({
+    //         from: deployer.address,
+    //         to: addressSaver.address,
+    //         exitCode: 3,
+    //     })
+    // })
+
+    // it('shout test', async () => {
+    //     // console.log(code)
+    // })
 });
