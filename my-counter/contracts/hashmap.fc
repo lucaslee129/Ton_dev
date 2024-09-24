@@ -1,0 +1,41 @@
+#include "imports/stdlib.fc";
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    int op = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+
+    cell data = get_data();
+    sell ds = data.begin_parse();
+    cell dic = ds.slice_bits() == 0 ? new_dict() : data;
+    if(op == 1) {
+        ;; add new entry here
+        int key = in_msg_body~load_uint(256);
+        dic~udict_set(256,key,in_msg_body);
+        set_data(dic);
+        return();
+    }
+    if(op == 2) {
+        ;; delete here
+        int key = -1;
+        do {
+            (key, slice cs, int f) = dic.udict_get_next?(256, key);
+            if (f) {
+                int valid_until = cs~load_uint(64);
+                if (valid_until < now()) {
+                    ;;delete here
+                    dic~udict_delete?(256, key);
+                }
+            }
+        } until (~ f);
+
+        if(dic.dict_empty?()) {
+            set_data(begin_cell().end_cell());
+        } else {
+            set_data(dic);
+        }
+
+        return ();
+    }
+    throw(1001);
+
+}
