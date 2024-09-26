@@ -29,7 +29,7 @@ cell load_data() {
     int query_id = in_msg_body~load_uint(64); ;; load query_id from message body
 
     cell data = get_data(); ;; get data from permanent storage
-    sell ds = data.begin_parse(); ;; convert data cell to slice
+    slice ds = data.begin_parse(); ;; convert data cell to slice
 
     ;;; slice_bits() - Returns the number of data bits in `slice` [s].
     ;;; new_dict() - Creates an empty dictionary, which is actually a null value. Equivalent to PUSHNULL
