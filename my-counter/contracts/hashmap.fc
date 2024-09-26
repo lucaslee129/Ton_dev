@@ -1,26 +1,62 @@
 #include "imports/stdlib.fc";
 
-() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
-    int op = in_msg_body~load_uint(32);
-    int query_id = in_msg_body~load_uint(64);
-
+cell load_data() {
     cell data = get_data();
-    sell ds = data.begin_parse();
-    cell dic = ds.slice_bits() == 0 ? new_dict() : data;
+    slice ds = data.begin_parse();
+    if (ds.slice_bits() == 0) {
+        return new_dict();
+    } else {
+        return data;
+    }
+}
+
+(int, slice) get_key(int key) method_id {
+    cell dic = load_data();
+
+    ;; @param1: length of key
+    ;; @param2: key
+    ;; @return:  payload - value associated with key, success - success flag
+    (slice payload, int success) = dic.udict_get?(256, key);
+    throw_unless(98, success);
+
+    int valid_until = payload~load_uint(64);
+    return (valid_until, payload);
+}
+
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    int op = in_msg_body~load_uint(32); ;; load op flag from message body
+    int query_id = in_msg_body~load_uint(64); ;; load query_id from message body
+
+    cell data = get_data(); ;; get data from permanent storage
+    sell ds = data.begin_parse(); ;; convert data cell to slice
+
+    ;;; slice_bits() - Returns the number of data bits in `slice` [s].
+    ;;; new_dict() - Creates an empty dictionary, which is actually a null value. Equivalent to PUSHNULL
+    cell dic = ds.slice_bits() == 0 ? new_dict() : data; ;; new_dict() is a special cell that creates empty dictionary
     if(op == 1) {
         ;; add new entry here
         int key = in_msg_body~load_uint(256);
-        dic~udict_set(256,key,in_msg_body);
+
+        ;; set the value associated with key in the dict dictionary, in the slice and return the resulting dictionary
+        ;; @param1 - length of the key
+        ;; @param2 - key
+        ;; @param3 - value
+        dic~udict_set(256, key, in_msg_body); 
         set_data(dic);
         return();
     }
     if(op == 2) {
-        ;; delete here
-        int key = -1;
-        do {
+        ;; delete all outdated data
+        int key = -1; ;; set the key to the minimum value
+        do { ;; Loop the dictionary until the end
+
+            ;; udict_get_next? - computes the minimum key k in the dict dictionary which greater than
+            ;; than specified value and returns k, associated value and success flag
+            ;; if dictionary is empty, returns (null, null, 0)
             (key, slice cs, int f) = dic.udict_get_next?(256, key);
-            if (f) {
-                int valid_until = cs~load_uint(64);
+            if (f) { ;; if key exists
+                int valid_until = cs~load_uint(64); 
                 if (valid_until < now()) {
                     ;;delete here
                     dic~udict_delete?(256, key);
@@ -28,10 +64,10 @@
             }
         } until (~ f);
 
-        if(dic.dict_empty?()) {
-            set_data(begin_cell().end_cell());
+        if(dic.dict_empty?()) { ;; if dictionary is empty
+            set_data(begin_cell().end_cell()); ;; set the cell to empty value
         } else {
-            set_data(dic);
+            set_data(dic); ;; set the cell with remaining data
         }
 
         return ();
